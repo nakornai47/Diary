@@ -8,6 +8,7 @@ export const STORAGE_KEYS = {
   notes: '@openhabittracker/notes',
   expenses: '@openhabittracker/expenses',
   settings: '@openhabittracker/settings',
+  pinHash: '@openhabittracker/pin-hash',
 };
 
 export async function getItem<T>(key: string, defaultValue: T): Promise<T> {

@@ -6,10 +6,11 @@ import { StatusBar } from 'expo-status-bar';
 import { lightTheme, darkTheme } from '../../theme';
 import { useAppStore } from '../../stores/useAppStore';
 import { useDataStore } from '../../stores/dataStore';
+import PinLock from '../auth/PinLock';
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
   const colorScheme = useColorScheme();
-  const { settings, loadSettings, setIsReady } = useAppStore();
+  const { settings, isAuthenticated, loadSettings, setIsReady } = useAppStore();
   const { loadAll, seedDefaults } = useDataStore();
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -33,11 +34,13 @@ export default function AppProviders({ children }: { children: React.ReactNode }
     return null;
   }
 
+  const isLocked = settings.pinEnabled && !isAuthenticated;
+
   return (
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
-        {children}
+        {isLocked ? <PinLock /> : children}
       </PaperProvider>
     </SafeAreaProvider>
   );

@@ -1,5 +1,8 @@
 export const APP_NAME = 'Diary';
 
+export const PIN_LENGTH = 6;
+export const PIN_HASH_SALT = 'diary-app-static-salt-2026';
+
 export const DEFAULT_CATEGORIES = [
   { name: 'ส่วนตัว', color: '#0A84FF', icon: 'account' },
   { name: 'งาน', color: '#FF9500', icon: 'briefcase' },
