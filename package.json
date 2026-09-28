@@ -1,7 +1,7 @@
 {
   "name": "diary",
   "version": "1.0.0",
-  "homepage": "https://your-username.github.io/Diary",
+  "homepage": "https://nakornai47.github.io/Diary",
   "main": "expo-router/entry",
   "dependencies": {
     "expo": "~57.0.25",
