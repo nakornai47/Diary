@@ -9,7 +9,7 @@ const API_KEY = process.env.SYNC_API_KEY;
 const DATA_DIR = process.env.DATA_DIR;
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim())
-  : ['*'];
+  : true;
 
 if (!API_KEY || API_KEY.length < 8) {
   console.error(
