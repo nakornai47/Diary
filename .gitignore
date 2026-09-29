@@ -37,6 +37,7 @@ yarn-error.*
 # sync server
 server/data/
 server/dist/
+server/public/
 server/*.log
 
 # typescript

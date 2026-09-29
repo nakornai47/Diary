@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
 import { createAuthMiddleware } from './auth';
 import { createRoutes } from './routes';
 import { SyncStore } from './store';
@@ -20,6 +21,7 @@ if (!API_KEY || API_KEY.length < 8) {
 
 const app = express();
 const store = new SyncStore(DATA_DIR);
+const webDir = path.join(__dirname, '..', 'public', 'Diary');
 
 app.use(
   cors({
@@ -30,6 +32,15 @@ app.use(
   }),
 );
 
+// Serve web app under /Diary
+app.use('/Diary', express.static(webDir));
+app.get('/Diary/*', (_req, res) => {
+  res.sendFile(path.join(webDir, 'index.html'));
+});
+app.get('/', (_req, res) => {
+  res.redirect('/Diary/');
+});
+
 app.use(express.json({ limit: '10mb' }));
 
 app.use(createAuthMiddleware(API_KEY));
@@ -37,5 +48,6 @@ app.use(createRoutes(store));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Diary sync server listening on http://0.0.0.0:${PORT}`);
+  console.log(`Web app: http://0.0.0.0:${PORT}/Diary/`);
   console.log(`Data directory: ${store['dataDir']}`);
 });
