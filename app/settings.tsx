@@ -55,6 +55,14 @@ export default function SettingsScreen() {
     setSettings({ ...settings, currency });
   }
 
+  function handleBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  }
+
   async function handleToggleSync(enabled: boolean) {
     const next = { ...config, enabled };
     await saveConfig(next);
@@ -234,7 +242,7 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header>
-        <Appbar.BackAction onPress={() => router.back()} />
+        <Appbar.BackAction onPress={handleBack} />
         <Appbar.Content title="ตั้งค่า" />
       </Appbar.Header>
       <ScrollView>
