@@ -18,8 +18,6 @@ export interface Priority {
   deletedAt?: number;
 }
 
-export type ItemType = 'habit' | 'task' | 'note' | 'expense';
-
 export interface Habit {
   id: string;
   title: string;
@@ -30,6 +28,12 @@ export interface Habit {
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
+}
+
+export interface ChecklistItem {
+  id: string;
+  title: string;
+  isDone: boolean;
 }
 
 export interface Task {
@@ -46,12 +50,6 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
-}
-
-export interface ChecklistItem {
-  id: string;
-  title: string;
-  isDone: boolean;
 }
 
 export interface Note {
@@ -76,11 +74,33 @@ export interface Expense {
   deletedAt?: number;
 }
 
-export type AppItem = Habit | Task | Note | Expense;
+export type EntityName =
+  | 'categories'
+  | 'priorities'
+  | 'habits'
+  | 'tasks'
+  | 'notes'
+  | 'expenses';
 
-export interface AppSettings {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  currency: string;
-  pinEnabled: boolean;
+export interface SyncPayload {
+  version: number;
+  categories: Category[];
+  priorities: Priority[];
+  habits: Habit[];
+  tasks: Task[];
+  notes: Note[];
+  expenses: Expense[];
+  tombstones?: Record<string, number>;
 }
+
+export interface ServerData extends SyncPayload {
+  serverTime: number;
+}
+
+export type EntityArray =
+  | Category[]
+  | Priority[]
+  | Habit[]
+  | Task[]
+  | Note[]
+  | Expense[];

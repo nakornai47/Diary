@@ -17,8 +17,10 @@ import {
 import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useAppStore } from '../stores/useAppStore';
+import { useSyncStore } from '../stores/syncStore';
 import { CURRENCY_OPTIONS, APP_NAME, PIN_LENGTH, PIN_HASH_SALT } from '../constants';
 import { exportToJson, importFromJson } from '../services/backup';
+import { testConnection, performSync } from '../services/syncManager';
 import { getItem, setItem, removeItem, STORAGE_KEYS } from '../db';
 import * as DocumentPicker from 'expo-document-picker';
 
@@ -26,8 +28,15 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { settings, setSettings, setIsAuthenticated } = useAppStore();
+  const { config, status, setConfig, saveConfig } = useSyncStore();
   const [snackbar, setSnackbar] = useState({ visible: false, message: '' });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [syncForm, setSyncForm] = useState({
+    serverUrl: config.serverUrl,
+    apiKey: config.apiKey,
+  });
+  const [isTesting, setIsTesting] = useState(false);
 
   const [pinDialog, setPinDialog] = useState({
     visible: false,
@@ -44,6 +53,54 @@ export default function SettingsScreen() {
 
   function updateCurrency(currency: string) {
     setSettings({ ...settings, currency });
+  }
+
+  async function handleToggleSync(enabled: boolean) {
+    const next = { ...config, enabled };
+    await saveConfig(next);
+    if (enabled) {
+      performSync().catch(() => {
+        // Error state is shown via status
+      });
+    }
+  }
+
+  async function handleTestConnection() {
+    setIsTesting(true);
+    try {
+      const message = await testConnection(syncForm.serverUrl, syncForm.apiKey);
+      setSnackbar({ visible: true, message });
+    } catch (e) {
+      setSnackbar({
+        visible: true,
+        message: e instanceof Error ? e.message : 'ทดสอบการเชื่อมต่อล้มเหลว',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
+  async function handleSaveSyncSettings() {
+    const next = { ...config, serverUrl: syncForm.serverUrl.trim(), apiKey: syncForm.apiKey.trim() };
+    await saveConfig(next);
+    setSnackbar({ visible: true, message: 'บันทึกการตั้งค่าซิงค์แล้ว' });
+  }
+
+  async function handleSyncNow() {
+    try {
+      await performSync();
+      setSnackbar({ visible: true, message: 'ซิงค์ข้อมูลสำเร็จ' });
+    } catch (e) {
+      setSnackbar({
+        visible: true,
+        message: status.lastSyncError || 'ซิงค์ข้อมูลล้มเหลว',
+      });
+    }
+  }
+
+  function formatLastSync(): string {
+    if (!status.lastSyncAt) return 'ยังไม่เคยซิงค์';
+    return `ซิงค์ล่าสุด: ${new Date(status.lastSyncAt).toLocaleString()}`;
   }
 
   async function handleExport() {
@@ -241,6 +298,69 @@ export default function SettingsScreen() {
               onChange={handleImportWeb}
             />
           )}
+        </List.Section>
+
+        <Divider />
+
+        <List.Section>
+          <List.Subheader>ซิงค์ข้อมูล (Tailscale)</List.Subheader>
+          <List.Item
+            title="เปิดใช้งานการซิงค์"
+            description={config.enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน'}
+            left={(props) => <List.Icon {...props} icon="sync" />}
+            right={() => (
+              <Switch
+                value={config.enabled}
+                onValueChange={handleToggleSync}
+              />
+            )}
+          />
+          <TextInput
+            label="Server URL"
+            value={syncForm.serverUrl}
+            onChangeText={(text) => setSyncForm((s) => ({ ...s, serverUrl: text }))}
+            placeholder="http://100.x.x.x:3456"
+            mode="outlined"
+            style={{ marginHorizontal: 16, marginVertical: 8 }}
+          />
+          <TextInput
+            label="API Key"
+            value={syncForm.apiKey}
+            onChangeText={(text) => setSyncForm((s) => ({ ...s, apiKey: text }))}
+            secureTextEntry
+            mode="outlined"
+            style={{ marginHorizontal: 16, marginVertical: 8 }}
+          />
+          <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginVertical: 8 }}>
+            <Button
+              mode="outlined"
+              onPress={handleTestConnection}
+              loading={isTesting}
+              disabled={isTesting}
+              style={{ flex: 1 }}
+            >
+              ทดสอบการเชื่อมต่อ
+            </Button>
+            <Button
+              mode="outlined"
+              onPress={handleSaveSyncSettings}
+              style={{ flex: 1 }}
+            >
+              บันทึก
+            </Button>
+          </View>
+          <Button
+            mode="contained"
+            onPress={handleSyncNow}
+            loading={status.isSyncing}
+            disabled={status.isSyncing || !config.enabled}
+            style={{ marginHorizontal: 16, marginVertical: 8 }}
+          >
+            ซิงค์ตอนนี้
+          </Button>
+          <Text style={{ marginHorizontal: 16, marginBottom: 8, color: status.lastSyncError ? theme.colors.error : theme.colors.onSurfaceVariant }}>
+            {status.lastSyncError || formatLastSync()}
+          </Text>
         </List.Section>
 
         <Divider />

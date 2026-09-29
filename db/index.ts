@@ -9,6 +9,11 @@ export const STORAGE_KEYS = {
   expenses: '@openhabittracker/expenses',
   settings: '@openhabittracker/settings',
   pinHash: '@openhabittracker/pin-hash',
+  syncConfig: '@openhabittracker/sync-config',
+  syncStatus: '@openhabittracker/sync-status',
+  syncPending: '@openhabittracker/sync-pending',
+  syncDeviceId: '@openhabittracker/sync-device-id',
+  syncTombstones: '@openhabittracker/sync-tombstones',
 };
 
 export async function getItem<T>(key: string, defaultValue: T): Promise<T> {

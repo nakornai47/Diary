@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { lightTheme, darkTheme } from '../../theme';
 import { useAppStore } from '../../stores/useAppStore';
 import { useDataStore } from '../../stores/dataStore';
+import { initializeSync } from '../../services/syncManager';
 import PinLock from '../auth/PinLock';
 
 export default function AppProviders({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,7 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       await loadSettings();
       await loadAll();
       await seedDefaults();
+      initializeSync();
       setIsReady(true);
       setIsInitialized(true);
     }

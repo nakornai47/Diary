@@ -2,6 +2,20 @@ import { create } from 'zustand';
 import { Category, Priority, Habit, Task, Note, Expense } from '../models';
 import { getItem, setItem, STORAGE_KEYS, clearAll } from '../db';
 import { DEFAULT_CATEGORIES, DEFAULT_PRIORITIES } from '../constants';
+import { SyncPayload } from '../types/sync';
+import { addTombstone } from '../services/syncEngine';
+
+type SyncCallback = () => void;
+
+let syncCallback: SyncCallback | null = null;
+
+export function registerDataChangeCallback(callback: SyncCallback | null): void {
+  syncCallback = callback;
+}
+
+function notifySync(): void {
+  if (syncCallback) syncCallback();
+}
 
 interface DataState {
   categories: Category[];
@@ -17,34 +31,37 @@ interface DataState {
   seedDefaults: () => Promise<void>;
 
   // Categories
-  addCategory: (category: Omit<Category, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
 
   // Priorities
-  addPriority: (priority: Omit<Priority, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addPriority: (priority: Omit<Priority, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updatePriority: (priority: Priority) => Promise<void>;
   deletePriority: (id: string) => Promise<void>;
 
   // Habits
-  addHabit: (habit: Omit<Habit, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addHabit: (habit: Omit<Habit, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateHabit: (habit: Habit) => Promise<void>;
   deleteHabit: (id: string) => Promise<void>;
 
   // Tasks
-  addTask: (task: Omit<Task, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addTask: (task: Omit<Task, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateTask: (task: Task) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 
   // Notes
-  addNote: (note: Omit<Note, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addNote: (note: Omit<Note, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateNote: (note: Note) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
 
   // Expenses
-  addExpense: (expense: Omit<Expense, 'createdAt' | 'updatedAt'>) => Promise<void>;
+  addExpense: (expense: Omit<Expense, 'createdAt' | 'updatedAt' | 'deletedAt'>) => Promise<void>;
   updateExpense: (expense: Expense) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+
+  // Sync
+  applyRemoteData: (payload: SyncPayload) => Promise<void>;
 
   // Bulk
   resetAndImport: (data: { categories?: Category[]; priorities?: Priority[]; habits?: Habit[]; tasks?: Task[]; notes?: Note[]; expenses?: Expense[] }) => Promise<void>;
@@ -117,6 +134,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Category = { ...category, createdAt: ts, updatedAt: ts };
     set((state) => ({ categories: [...state.categories, item] }));
     await get().saveAll();
+    notifySync();
   },
   updateCategory: async (category) => {
     const updated = { ...category, updatedAt: now() };
@@ -124,10 +142,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       categories: state.categories.map((c) => (c.id === updated.id ? updated : c)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deleteCategory: async (id) => {
     set((state) => ({ categories: state.categories.filter((c) => c.id !== id) }));
+    await addTombstone(id);
     await get().saveAll();
+    notifySync();
   },
 
   // Priorities
@@ -136,6 +157,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Priority = { ...priority, createdAt: ts, updatedAt: ts };
     set((state) => ({ priorities: [...state.priorities, item] }));
     await get().saveAll();
+    notifySync();
   },
   updatePriority: async (priority) => {
     const updated = { ...priority, updatedAt: now() };
@@ -143,10 +165,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       priorities: state.priorities.map((p) => (p.id === updated.id ? updated : p)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deletePriority: async (id) => {
     set((state) => ({ priorities: state.priorities.filter((p) => p.id !== id) }));
+    await addTombstone(id);
     await get().saveAll();
+    notifySync();
   },
 
   // Habits
@@ -155,6 +180,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Habit = { ...habit, createdAt: ts, updatedAt: ts };
     set((state) => ({ habits: [item, ...state.habits] }));
     await get().saveAll();
+    notifySync();
   },
   updateHabit: async (habit) => {
     const updated = { ...habit, updatedAt: now() };
@@ -162,10 +188,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       habits: state.habits.map((h) => (h.id === updated.id ? updated : h)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deleteHabit: async (id) => {
     set((state) => ({ habits: state.habits.filter((h) => h.id !== id) }));
+    await addTombstone(id);
     await get().saveAll();
+    notifySync();
   },
 
   // Tasks
@@ -174,6 +203,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Task = { ...task, createdAt: ts, updatedAt: ts };
     set((state) => ({ tasks: [item, ...state.tasks] }));
     await get().saveAll();
+    notifySync();
   },
   updateTask: async (task) => {
     const updated = { ...task, updatedAt: now() };
@@ -181,10 +211,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       tasks: state.tasks.map((t) => (t.id === updated.id ? updated : t)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deleteTask: async (id) => {
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+    await addTombstone(id);
     await get().saveAll();
+    notifySync();
   },
 
   // Notes
@@ -193,6 +226,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Note = { ...note, createdAt: ts, updatedAt: ts };
     set((state) => ({ notes: [item, ...state.notes] }));
     await get().saveAll();
+    notifySync();
   },
   updateNote: async (note) => {
     const updated = { ...note, updatedAt: now() };
@@ -200,10 +234,13 @@ export const useDataStore = create<DataState>((set, get) => ({
       notes: state.notes.map((n) => (n.id === updated.id ? updated : n)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deleteNote: async (id) => {
     set((state) => ({ notes: state.notes.filter((n) => n.id !== id) }));
+    await addTombstone(id);
     await get().saveAll();
+    notifySync();
   },
 
   // Expenses
@@ -212,6 +249,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     const item: Expense = { ...expense, createdAt: ts, updatedAt: ts };
     set((state) => ({ expenses: [item, ...state.expenses] }));
     await get().saveAll();
+    notifySync();
   },
   updateExpense: async (expense) => {
     const updated = { ...expense, updatedAt: now() };
@@ -219,9 +257,24 @@ export const useDataStore = create<DataState>((set, get) => ({
       expenses: state.expenses.map((e) => (e.id === updated.id ? updated : e)),
     }));
     await get().saveAll();
+    notifySync();
   },
   deleteExpense: async (id) => {
     set((state) => ({ expenses: state.expenses.filter((e) => e.id !== id) }));
+    await addTombstone(id);
+    await get().saveAll();
+    notifySync();
+  },
+
+  applyRemoteData: async (payload) => {
+    set({
+      categories: payload.categories,
+      priorities: payload.priorities,
+      habits: payload.habits,
+      tasks: payload.tasks,
+      notes: payload.notes,
+      expenses: payload.expenses,
+    });
     await get().saveAll();
   },
 
@@ -236,6 +289,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       expenses: data.expenses || [],
     });
     await get().saveAll();
+    notifySync();
   },
 
   clearAll: async () => {

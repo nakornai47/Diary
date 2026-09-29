@@ -3,6 +3,13 @@ export const APP_NAME = 'Diary';
 export const PIN_LENGTH = 6;
 export const PIN_HASH_SALT = 'diary-app-static-salt-2026';
 
+export const SYNC_DEFAULTS = {
+  port: 3456,
+  syncIntervalMs: 30_000,
+  debounceMs: 2_000,
+  requestTimeoutMs: 15_000,
+};
+
 export const DEFAULT_CATEGORIES = [
   { name: 'ส่วนตัว', color: '#0A84FF', icon: 'account' },
   { name: 'งาน', color: '#FF9500', icon: 'briefcase' },
